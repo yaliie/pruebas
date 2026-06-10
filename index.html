@@ -191,17 +191,43 @@
   <!-- ===== ORDER BOX ===== -->
   <section class="section section-gray" id="order">
     <div class="container">
-      <h2 class="section-title">Consigue tus <span>NortiV8 Ahora</span></h2>
-      <p class="section-sub">Elige tu talla, confirma por WhatsApp y coordina la entrega. Así de simple.</p>
+      <div class="product">
+        <!-- GALERÍA -->
+        <div class="product-gallery">
+          <div class="product-main">
+            <span class="img-badge">-48%</span>
+            <img id="main-img" src="assets/img/producto-1.jpg" alt="Botas Tácticas NortiV8 — vista principal" onerror="this.style.visibility='hidden'">
+          </div>
+          <div class="product-thumbs" id="thumbs">
+            <button type="button" class="thumb active" data-img="assets/img/producto-1.jpg" aria-label="Vista 1"><img src="assets/img/producto-1.jpg" alt="" onerror="this.style.visibility='hidden'"></button>
+            <button type="button" class="thumb" data-img="assets/img/producto-2.jpg" aria-label="Vista 2"><img src="assets/img/producto-2.jpg" alt="" onerror="this.style.visibility='hidden'"></button>
+            <button type="button" class="thumb" data-img="assets/img/producto-3.jpg" aria-label="Vista 3"><img src="assets/img/producto-3.jpg" alt="" onerror="this.style.visibility='hidden'"></button>
+            <button type="button" class="thumb" data-img="assets/img/producto-4.jpg" aria-label="Vista 4"><img src="assets/img/producto-4.jpg" alt="" onerror="this.style.visibility='hidden'"></button>
+          </div>
+        </div>
 
-      <div class="price-box">
-        <p class="product-name">🥾 Botas Tácticas NortiV8</p>
-        <p class="price-original">Precio regular: $380.00</p>
-        <div class="price-actual" data-price>$199.99</div>
-        <span class="discount-tag">-48% DE DESCUENTO</span>
+        <!-- INFO -->
+        <div class="product-info">
+          <div class="product-cat">NortiV8 · Botas Tácticas</div>
+          <h1 class="product-title">Botas Tácticas NortiV8</h1>
+          <div class="product-rating">
+            <span class="stars" aria-hidden="true">★★★★★</span>
+            <span class="rating-count"><strong>4.9</strong> · 218 opiniones</span>
+          </div>
+          <p class="product-desc">Resistencia militar con el peso de una zapatilla. Cierre rápido de cremallera, suela antideslizante ETPU e interior transpirable. Pensadas para trabajo, moto, trekking y uso diario rudo.</p>
 
-        <div class="tallas-section">
-          <p class="tallas-label">Selecciona tu talla (US):</p>
+          <div class="product-price">
+            <span class="pp-actual" data-price>$199.99</span>
+            <span class="pp-original">$380.00</span>
+            <span class="pp-badge">-48%</span>
+          </div>
+          <p class="product-stock">✅ En stock · Quedan pocos pares por talla</p>
+
+          <div class="tallas-section">
+            <div class="tallas-head">
+              <span class="tallas-label">Talla (US)</span>
+              <a href="#faq" class="size-guide">📏 Guía de tallas</a>
+            </div>
           <div class="tallas-grid" id="tallas" role="group" aria-label="Tallas disponibles">
             <button type="button" class="talla-btn">7</button>
             <button type="button" class="talla-btn">7.5</button>
@@ -215,8 +241,7 @@
             <button type="button" class="talla-btn">12</button>
           </div>
           <p class="talla-error" id="talla-error" role="alert"></p>
-          <p class="talla-hint">¿No sabes tu talla? <a href="#faq">Ver guía de tallas ↓</a></p>
-        </div>
+          </div>
 
         <a href="#" class="btn btn-whatsapp btn-block" data-wa data-wa-needs-size
            data-wa-text="Hola, quiero ordenar mis Botas NortiV8.">
@@ -224,11 +249,13 @@
           Ordenar por WhatsApp
         </a>
 
-        <p class="reserve-note">
-          💵 <strong>Paga al recibir</strong> si estás en Maracay (delivery).<br>
-          🚚 Envíos a toda Venezuela por agencia (Zoom / MRW).
-        </p>
-      </div>
+          <ul class="product-assurances">
+            <li>💵 <strong>Paga al recibir</strong> si estás en Maracay (delivery)</li>
+            <li>🛵 Delivery en Maracay · 🚚 Envío a toda Venezuela (Zoom / MRW)</li>
+            <li>🔄 Cambio de talla garantizado · ✅ Producto original</li>
+          </ul>
+        </div><!-- /product-info -->
+      </div><!-- /product -->
     </div>
   </section>
 

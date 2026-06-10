@@ -79,6 +79,25 @@ function initWhatsappLinks() {
   });
 }
 
+/* ====== GALERÍA DE PRODUCTO ====== */
+function initGallery() {
+  const thumbs = document.getElementById("thumbs");
+  const main = document.getElementById("main-img");
+  if (!thumbs || !main) return;
+
+  thumbs.querySelectorAll(".thumb").forEach((t) => {
+    t.addEventListener("click", () => {
+      const src = t.getAttribute("data-img");
+      if (src) {
+        main.src = src;
+        main.style.visibility = "visible";
+      }
+      thumbs.querySelectorAll(".thumb").forEach((x) => x.classList.remove("active"));
+      t.classList.add("active");
+    });
+  });
+}
+
 /* ====== FAQ ACORDEÓN ====== */
 function initFaq() {
   document.querySelectorAll(".faq-question").forEach((btn) => {
@@ -101,6 +120,7 @@ function initYear() {
 document.addEventListener("DOMContentLoaded", () => {
   initTallas();
   initWhatsappLinks();
+  initGallery();
   initFaq();
   initYear();
 });
