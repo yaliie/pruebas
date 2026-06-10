@@ -354,31 +354,99 @@
     </div>
   </section>
 
-  <!-- ===== TESTIMONIOS ===== -->
+  <!-- ===== TESTIMONIOS (carrusel de imágenes) ===== -->
   <section class="section section-dark" id="opiniones">
     <div class="container">
       <h2 class="section-title">Lo Que Dicen <span>Nuestros Clientes</span></h2>
       <p class="section-sub">Hombres de Maracay y toda Venezuela ya las usan a diario.</p>
-      <div class="testimonios-grid">
-        <div class="testimonio-card">
+    </div>
+
+    <!--
+      REVIEWS: tarjetas con FOTO estática. Sube las fotos a assets/img/review-1.jpg ... review-3.jpg
+      (vertical, ~600x800) y los avatares a assets/img/avatar-1.jpg ... avatar-3.jpg (cuadrados).
+    -->
+    <div class="reviews-wrap">
+      <button class="rev-arrow rev-prev" aria-label="Anterior">‹</button>
+      <div class="reviews-carousel" id="reviews">
+
+        <!-- Foto review -->
+        <article class="review-card review-img" data-emoji="🥾">
+          <img class="review-photo" src="assets/img/review-1.jpg" alt="Cliente José R. con sus botas NortiV8" loading="lazy" onerror="this.style.display='none'">
+          <div class="review-overlay">
+            <div class="review-person">
+              <img class="review-avatar" src="assets/img/avatar-1.jpg" alt="" onerror="this.style.display='none'">
+              <div>
+                <div class="review-name">José R.</div>
+                <div class="review-role">Construcción · Maracay</div>
+              </div>
+            </div>
+            <div class="review-bottom">
+              <div class="stars">★★★★★</div>
+              <p class="review-quote">"Me las pongo en segundos y aguanto todo el día parado."</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- Reseña de texto -->
+        <article class="review-card review-text">
           <div class="stars">★★★★★</div>
-          <p>"Trabajo en construcción y son lo más cómodo que me he puesto. La cremallera es una bendición a las 5am."</p>
-          <div class="testimonio-author">José R. <span class="verified-tag">✓ Compra verificada</span></div>
-          <div class="testimonio-meta">Maracay, Aragua</div>
-        </div>
-        <div class="testimonio-card">
+          <h3 class="review-title">Por fin una bota que aguanta la jornada</h3>
+          <p class="review-body">Trabajo parado todo el día y son lo más cómodo que me he puesto. La cremallera es una bendición a las 5am, me las pongo en segundos. Livianas de verdad.</p>
+          <div class="review-footer">
+            <span class="review-name">José R.</span>
+            <span class="verified">✓ Compra verificada</span>
+          </div>
+        </article>
+
+        <!-- Foto review -->
+        <article class="review-card review-img" data-emoji="🏍️">
+          <img class="review-photo" src="assets/img/review-2.jpg" alt="Cliente Carlos M. con sus botas NortiV8" loading="lazy" onerror="this.style.display='none'">
+          <div class="review-overlay">
+            <div class="review-person">
+              <img class="review-avatar" src="assets/img/avatar-2.jpg" alt="" onerror="this.style.display='none'">
+              <div>
+                <div class="review-name">Carlos M.</div>
+                <div class="review-role">Motorizado · Valencia</div>
+              </div>
+            </div>
+            <div class="review-bottom">
+              <div class="stars">★★★★★</div>
+              <p class="review-quote">"Livianas y agarran bien. Las uso en la moto todos los días."</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- Foto review -->
+        <article class="review-card review-img" data-emoji="🛡️">
+          <img class="review-photo" src="assets/img/review-3.jpg" alt="Cliente Luis A. con sus botas NortiV8" loading="lazy" onerror="this.style.display='none'">
+          <div class="review-overlay">
+            <div class="review-person">
+              <img class="review-avatar" src="assets/img/avatar-3.jpg" alt="" onerror="this.style.display='none'">
+              <div>
+                <div class="review-name">Luis A.</div>
+                <div class="review-role">Vigilancia · Maracay</div>
+              </div>
+            </div>
+            <div class="review-bottom">
+              <div class="stars">★★★★★</div>
+              <p class="review-quote">"Cómodas en guardias largas. Pedí cambio de talla sin problema."</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- Reseña de texto -->
+        <article class="review-card review-text">
           <div class="stars">★★★★★</div>
-          <p>"Las uso en la moto todos los días. Livianas y agarran bien. Llegaron rápido a Valencia por agencia."</p>
-          <div class="testimonio-author">Carlos M. <span class="verified-tag">✓ Compra verificada</span></div>
-          <div class="testimonio-meta">Valencia, Carabobo</div>
-        </div>
-        <div class="testimonio-card">
-          <div class="stars">★★★★★</div>
-          <p>"Pedí cambio de talla y sin problema me la cambiaron. Atención de primera por WhatsApp."</p>
-          <div class="testimonio-author">Luis A. <span class="verified-tag">✓ Compra verificada</span></div>
-          <div class="testimonio-meta">Maracay, Aragua</div>
-        </div>
+          <h3 class="review-title">Llegó rápido y el cambio de talla sin enredos</h3>
+          <p class="review-body">Pedí desde Valencia y llegó en pocos días por agencia. La primera talla me quedó justa y me la cambiaron sin problema por WhatsApp. Atención de primera, se siente seguro comprarles.</p>
+          <div class="review-footer">
+            <span class="review-name">Carlos M.</span>
+            <span class="verified">✓ Compra verificada</span>
+          </div>
+        </article>
+
       </div>
+      <button class="rev-arrow rev-next" aria-label="Siguiente">›</button>
     </div>
   </section>
 

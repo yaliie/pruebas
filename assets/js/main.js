@@ -110,6 +110,19 @@ function initFaq() {
   });
 }
 
+/* ====== CARRUSEL DE RESEÑAS ====== */
+function initReviews() {
+  const car = document.getElementById("reviews");
+  if (!car) return;
+  const card = car.querySelector(".review-card");
+  const step = card ? card.offsetWidth + 18 : 320; // ancho de tarjeta + gap
+
+  const prev = document.querySelector(".rev-prev");
+  const next = document.querySelector(".rev-next");
+  if (prev) prev.addEventListener("click", () => car.scrollBy({ left: -step, behavior: "smooth" }));
+  if (next) next.addEventListener("click", () => car.scrollBy({ left: step, behavior: "smooth" }));
+}
+
 /* ====== AÑO EN FOOTER ====== */
 function initYear() {
   const el = document.getElementById("year");
@@ -121,6 +134,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initTallas();
   initWhatsappLinks();
   initGallery();
+  initReviews();
   initFaq();
   initYear();
 });
