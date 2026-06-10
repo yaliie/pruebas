@@ -72,12 +72,15 @@ button { font-family: inherit; }
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 18px 36px;
+  padding: 18px 32px;
   border-radius: 10px;
   border: none;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
   margin: 6px;
+  white-space: nowrap;          /* nunca parte el texto en dos líneas */
+  line-height: 1.1;
+  text-align: center;
 }
 .btn:active { transform: translateY(1px); }
 .btn-primary { background: var(--naranja); color: #000; }
@@ -86,6 +89,33 @@ button { font-family: inherit; }
 .btn-whatsapp:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(37,211,102,0.35); }
 .btn-whatsapp svg { width: 22px; height: 22px; fill: currentColor; }
 .btn-block { width: 100%; margin: 8px 0; }
+.btn-block svg { flex-shrink: 0; }
+
+/* Grupo de CTAs: alineados y del mismo alto */
+.cta-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  align-items: stretch;
+}
+.cta-group .btn { margin: 0; }
+
+/* En móvil: apilados, mismo ancho, sin cortarse */
+@media (max-width: 560px) {
+  .cta-group { flex-direction: column; align-items: stretch; width: 100%; max-width: 380px; margin: 0 auto; }
+  .cta-group .btn { width: 100%; }
+  .cta-group .btn,
+  .btn-block {
+    font-size: 0.98rem;
+    letter-spacing: 0.3px;
+    padding: 16px 18px;
+  }
+}
+@media (max-width: 360px) {
+  .cta-group .btn,
+  .btn-block { font-size: 0.9rem; padding: 15px 14px; gap: 8px; }
+}
 
 /* ===== HEADER / NAV ===== */
 .site-header {
