@@ -125,8 +125,7 @@ button { font-family: inherit; }
 
 /* ===== HERO ===== */
 .hero {
-  background: linear-gradient(to bottom, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.55) 100%),
-              var(--hero-bg, #161616) center/cover no-repeat;
+  background: #161616 center/cover no-repeat;
   min-height: 86vh;
   display: flex;
   flex-direction: column;
