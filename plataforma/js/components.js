@@ -42,7 +42,15 @@
     root.appendChild(overlay);
     const close = () => overlay.remove();
     overlay.querySelector('.modal-close').onclick = close;
-    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+    // Cerrar al tocar el fondo SOLO si el clic empezó y terminó en el fondo.
+    // Evita que se cierre al seleccionar/arrastrar texto dentro del formulario
+    // y soltar el mouse fuera del recuadro (antes borraba lo escrito).
+    let downOnBackdrop = false;
+    overlay.addEventListener('mousedown', e => { downOnBackdrop = (e.target === overlay); });
+    overlay.addEventListener('mouseup', e => {
+      if (downOnBackdrop && e.target === overlay) close();
+      downOnBackdrop = false;
+    });
     return { overlay, close, el: (s) => overlay.querySelector(s), els: (s) => Array.from(overlay.querySelectorAll(s)) };
   }
 
