@@ -22,7 +22,7 @@
   ];
   const AUDIENCES = ['Mujer', 'Hombre', 'Niño', 'Niña', 'Unisex'];
   const CHANNELS = ['Instagram', 'WhatsApp', 'Tienda online', 'Venta presencial', 'Referido', 'Marketplace', 'Otro'];
-  const PAY_METHODS = ['Bolívares a tasa BCV', 'Bolívares a tasa USDT', 'Efectivo en dólares', 'USDT', 'Pago móvil', 'Transferencia bancaria', 'Zelle', 'Pago mixto'];
+  const PAY_METHODS = ['Bolívares a tasa BCV', 'Bolívares a tasa USDT', 'Efectivo en dólares', 'Efectivo en euros', 'USDT', 'Pago móvil', 'Transferencia bancaria', 'Zelle', 'Pago mixto'];
   const PLATFORMS = ['SHEIN', 'AliExpress', 'Temu', 'Mayorista local', 'Otro'];
   const PRODUCT_STATES = ['disponible', 'poco inventario', 'agotado', 'descontinuado'];
   const INCOME_CATS = ['Venta de productos', 'Pagos pendientes recibidos', 'Ingresos adicionales', 'Recuperación de inversiones', 'Otros ingresos'];
@@ -33,7 +33,7 @@
   //  SEMILLA — datos de ejemplo realistas
   // ---------------------------------------------------------
   function seed() {
-    const bcv = 853.0, usdt = 866.0; // BCV editable; USDT ~866-868. Brecha realista de pocos %.
+    const bcv = 853.0, usdt = 866.0, eur = 832.0; // BCV/EUR editables; USDT ~866-868. Brecha realista de pocos %.
 
     const suppliers = [
       { id: 'sup_shein', name: 'SHEIN Oficial', country: 'China', platform: 'SHEIN', contact: 'app SHEIN', storeLink: 'https://shein.com', avgDeliveryDays: 18, avgShippingUsd: 6, quality: 4, notes: 'Buena relación precio/calidad en pijamas de dama.' },
@@ -98,16 +98,16 @@
     ];
 
     const rateHistory = [
-      { id: uid('r'), bcv: 840, usdt: 858, date: daysAgo(30) },
-      { id: uid('r'), bcv: 845, usdt: 862, date: daysAgo(20) },
-      { id: uid('r'), bcv: 849, usdt: 864, date: daysAgo(10) },
-      { id: uid('r'), bcv: 851, usdt: 867, date: daysAgo(3) },
-      { id: uid('r'), bcv: bcv, usdt: usdt, date: now() },
+      { id: uid('r'), bcv: 840, usdt: 858, eur: 812, date: daysAgo(30) },
+      { id: uid('r'), bcv: 845, usdt: 862, eur: 818, date: daysAgo(20) },
+      { id: uid('r'), bcv: 849, usdt: 864, eur: 824, date: daysAgo(10) },
+      { id: uid('r'), bcv: 851, usdt: 867, eur: 828, date: daysAgo(3) },
+      { id: uid('r'), bcv: bcv, usdt: usdt, eur: eur, date: now() },
     ];
 
     return {
       version: 1,
-      rates: { bcv, usdt, updatedAt: now() },
+      rates: { bcv, usdt, eur, updatedAt: now() },
       rateHistory,
       config: {
         profitTargetLow: 30, profitTargetHigh: 35,
@@ -155,7 +155,7 @@
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) { db = JSON.parse(raw); }
+      if (raw) { db = JSON.parse(raw); migrate(); }
       else { db = seed(); save(); }
     } catch (e) {
       db = seed();
@@ -166,6 +166,11 @@
     try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { console.warn('No se pudo guardar', e); }
   }
   function reset() { db = seed(); save(); return db; }
+
+  // Migración para datos guardados de versiones anteriores (añade campos nuevos).
+  function migrate() {
+    if (db && db.rates && db.rates.eur == null) db.rates.eur = 832;
+  }
 
   // ---------------------------------------------------------
   //  Bitácora de cambios (historial)
@@ -227,11 +232,12 @@
     isAdmin() { return this.currentUser && this.currentUser.role === 'Administrador'; },
 
     // tasas
-    setRates(bcv, usdt) {
+    setRates(bcv, usdt, eur) {
       const old = { ...db.rates };
-      db.rates = { bcv: +bcv, usdt: +usdt, updatedAt: now() };
-      db.rateHistory.push({ id: uid('r'), bcv: +bcv, usdt: +usdt, date: now() });
-      log('tasas', 'actualizar', 'BCV/USDT', old.bcv + '/' + old.usdt, bcv + '/' + usdt);
+      if (eur == null) eur = old.eur; // permite actualizar sin tocar EUR
+      db.rates = { bcv: +bcv, usdt: +usdt, eur: +eur, updatedAt: now() };
+      db.rateHistory.push({ id: uid('r'), bcv: +bcv, usdt: +usdt, eur: +eur, date: now() });
+      log('tasas', 'actualizar', 'BCV/USDT/EUR', old.bcv + '/' + old.usdt + '/' + old.eur, bcv + '/' + usdt + '/' + eur);
       save();
     },
   };

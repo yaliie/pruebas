@@ -186,7 +186,7 @@
     S.db.movements.forEach(m => {
       if (m.type !== 'expense') return;
       const d = new Date(m.date); const key = d.getFullYear() + '-' + (d.getMonth() + 1);
-      if (map[key]) map[key].expenses += F.toUSD(m.amount, m.currency === 'Bs' ? 'Bs-USDT' : m.currency, m.rateBCV || S.db.rates.bcv, m.rate || S.db.rates.usdt);
+      if (map[key]) map[key].expenses += F.movementUSD(m);
     });
     return months.map(k => map[k]);
   }
@@ -639,6 +639,7 @@
         <div class="calc-row"><span>Total en USD</span><b>${fmt.usd(eq.usd)}</b></div>
         <div class="calc-row"><span>En Bs a tasa BCV</span><b>${fmt.bs(eq.bsBCV)}</b></div>
         <div class="calc-row"><span>En Bs a tasa USDT</span><b>${fmt.bs(eq.bsUSDT)}</b></div>
+        <div class="calc-row"><span>Equivalente en euros</span><b>${fmt.eur(eq.eur)}</b></div>
         <div class="calc-row"><span>Diferencia entre tasas</span><b>${fmt.bs(eq.gapBs)} (${fmt.pct(eq.gapPct)})</b></div>
         <div class="calc-row" style="border-top:1px solid var(--border-2);margin-top:6px;padding-top:8px"><span>Ganancia contable</span><b>${fmt.usd(a.accountingProfit)}</b></div>
         <div class="calc-row"><span>Ganancia sostenible</span><b class="${a.sustainableProfit < 0 ? 'neg' : 'pos'}">${fmt.usd(a.sustainableProfit)}</b></div>
@@ -653,7 +654,7 @@
   // =========================================================
   Views.finanzas = function (c) {
     const movs = S.db.movements.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
-    const toUSD = m => F.toUSD(m.amount, m.currency === 'Bs' ? 'Bs-USDT' : m.currency, m.rateBCV || S.db.rates.bcv, m.rate || S.db.rates.usdt);
+    const toUSD = m => F.movementUSD(m);
     const totalIn = movs.filter(m => m.type === 'income').reduce((s, m) => s + toUSD(m), 0);
     const totalOut = movs.filter(m => m.type === 'expense').reduce((s, m) => s + toUSD(m), 0);
     const cols = [
@@ -684,12 +685,14 @@
       <label class="field"><span>Tipo</span><input value="${type === 'income' ? 'Ingreso' : 'Egreso'}" disabled></label>
       <label class="field"><span>Categoría</span><select data-k="category">${optionList(cats, m0.category)}</select></label>
       <label class="field"><span>Monto</span><input type="number" step="0.01" data-k="amount" value="${m0.amount || 0}"></label>
-      <label class="field"><span>Moneda</span><select data-k="currency"><option ${m0.currency === 'USD' ? 'selected' : ''}>USD</option><option ${m0.currency === 'USDT' ? 'selected' : ''}>USDT</option><option ${m0.currency === 'Bs' ? 'selected' : ''}>Bs</option></select></label>
-      <label class="field"><span>Tasa (para Bs)</span><input type="number" data-k="rate" value="${m0.rate || S.db.rates.usdt}"></label>
+      <label class="field"><span>Moneda</span><select data-k="currency"><option ${m0.currency === 'USD' ? 'selected' : ''}>USD</option><option ${m0.currency === 'USDT' ? 'selected' : ''}>USDT</option><option ${m0.currency === 'EUR' ? 'selected' : ''}>EUR</option><option ${m0.currency === 'Bs' ? 'selected' : ''}>Bs</option></select></label>
+      <label class="field"><span>Tasa (Bs por unidad, para Bs/€)</span><input type="number" data-k="rate" value="${m0.rate || (m0.currency === 'EUR' ? S.db.rates.eur : S.db.rates.usdt)}"></label>
       <label class="field"><span>Fecha</span><input type="date" data-k="date" value="${(m0.date || S.now()).slice(0, 10)}"></label>
       <label class="field full"><span>Descripción</span><input data-k="description" value="${esc(m0.description || '')}"></label>
     </div>`;
     const m = UI.modal({ title: (id ? 'Editar ' : 'Nuevo ') + (type === 'income' ? 'ingreso' : 'egreso'), body, footer: `${id && S.isAdmin() ? '<button class="btn btn-danger" data-del>Eliminar</button>' : ''}<button class="btn btn-ghost" data-cancel>Cancelar</button><button class="btn btn-primary" data-save>Guardar</button>` });
+    const curSel = m.el('[data-k="currency"]'), rateInp = m.el('[data-k="rate"]');
+    curSel.onchange = () => { if (curSel.value === 'EUR') rateInp.value = S.db.rates.eur; else if (curSel.value === 'Bs' || curSel.value === 'USDT') rateInp.value = S.db.rates.usdt; };
     m.el('[data-cancel]').onclick = m.close;
     if (id && S.isAdmin()) m.el('[data-del]').onclick = () => UI.confirm('¿Eliminar movimiento?', () => { S.remove('movements', id); m.close(); global.App.refresh(); }, { danger: true, yes: 'Eliminar' });
     m.el('[data-save]').onclick = () => {
@@ -965,15 +968,17 @@
         <div class="card card-pad">
           <h4 style="margin:0 0 4px">💱 Tasas cambiarias</h4>
           <p class="muted small" style="margin:0 0 12px">Actualizadas: ${fmt.datetime(r.updatedAt)}</p>
-          <div class="form-grid">
+          <div class="form-grid three">
             <label class="field"><span>Tasa BCV (Bs/USD)</span><input type="number" step="0.01" data-r="bcv" value="${r.bcv}"></label>
             <label class="field"><span>Tasa USDT (Bs/USD)</span><input type="number" step="0.01" data-r="usdt" value="${r.usdt}"></label>
+            <label class="field"><span>Tasa EUR (Bs/€)</span><input type="number" step="0.01" data-r="eur" value="${r.eur}"></label>
           </div>
-          <div class="calc-box"><div class="calc-row"><span>Diferencia entre tasas</span><b>${fmt.bs(eq.gapBs)} (${fmt.pct(eq.gapPct)})</b></div>
-          <div class="calc-row muted small"><span>Referencia USDT frecuente</span><b>866 – 868 Bs</b></div></div>
+          <div class="calc-box"><div class="calc-row"><span>Diferencia entre tasas (BCV vs USDT)</span><b>${fmt.bs(eq.gapBs)} (${fmt.pct(eq.gapPct)})</b></div>
+          <div class="calc-row"><span>1 € equivale a</span><b>${fmt.usd(r.usdt ? r.eur / r.usdt : 0)} · ${fmt.bs(r.eur)}</b></div>
+          <div class="calc-row muted small"><span>Referencia: USDT ~866-868 Bs · EUR editable</span><b></b></div></div>
           <button class="btn btn-primary btn-block" data-saverates>Guardar tasas</button>
           <div class="section-title">Historial de tasas</div>
-          ${UI.table([{ label: 'Fecha', get: h => fmt.datetime(h.date) }, { label: 'BCV', num: true, get: h => fmt.num(h.bcv) }, { label: 'USDT', num: true, get: h => fmt.num(h.usdt) }, { label: 'Brecha', num: true, get: h => fmt.pct(((h.usdt - h.bcv) / h.bcv) * 100) }], hist)}
+          ${UI.table([{ label: 'Fecha', get: h => fmt.datetime(h.date) }, { label: 'BCV', num: true, get: h => fmt.num(h.bcv) }, { label: 'USDT', num: true, get: h => fmt.num(h.usdt) }, { label: 'EUR', num: true, get: h => fmt.num(h.eur || 0) }, { label: 'Brecha', num: true, get: h => fmt.pct(((h.usdt - h.bcv) / h.bcv) * 100) }], hist)}
         </div>
         <div class="card card-pad">
           <h4 style="margin:0 0 12px">🎯 Rentabilidad y fondos</h4>
@@ -1013,7 +1018,7 @@
         <button class="btn btn-danger" data-reset>♻️ Restablecer datos de ejemplo</button>
       </div>`;
 
-    UI.el('[data-saverates]', c).onclick = () => { const bcv = +UI.el('[data-r="bcv"]', c).value, usdt = +UI.el('[data-r="usdt"]', c).value; if (!bcv || !usdt) return UI.toast('Tasas inválidas', 'w'); S.setRates(bcv, usdt); UI.toast('Tasas actualizadas', 'g'); global.App.refresh(); };
+    UI.el('[data-saverates]', c).onclick = () => { const bcv = +UI.el('[data-r="bcv"]', c).value, usdt = +UI.el('[data-r="usdt"]', c).value, eur = +UI.el('[data-r="eur"]', c).value; if (!bcv || !usdt || !eur) return UI.toast('Tasas inválidas', 'w'); S.setRates(bcv, usdt, eur); UI.toast('Tasas actualizadas', 'g'); global.App.refresh(); };
     UI.el('[data-saveconfig]', c).onclick = () => {
       const f = {}; ['reposicion', 'disponible', 'publicidad', 'reserva'].forEach(k => f[k] = +UI.el(`[data-f="${k}"]`, c).value || 0);
       const sum = f.reposicion + f.disponible + f.publicidad + f.reserva;

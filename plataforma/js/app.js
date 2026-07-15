@@ -74,6 +74,7 @@
       el('#topbar-rates').innerHTML = `
         <span class="rate-chip">BCV <b>${F.fmt.num(r.bcv)}</b></span>
         <span class="rate-chip">USDT <b>${F.fmt.num(r.usdt)}</b></span>
+        <span class="rate-chip">EUR <b>${F.fmt.num(r.eur)}</b></span>
         <span class="rate-chip">Brecha <span class="gap">${F.fmt.pct(eq.gapPct)}</span></span>`;
     },
 

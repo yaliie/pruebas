@@ -10,6 +10,7 @@
   // ---- Formateo ----
   const fmt = {
     usd(n) { return '$' + (Math.round((+n || 0) * 100) / 100).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
+    eur(n) { return '€' + (Math.round((+n || 0) * 100) / 100).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
     bs(n) { return (Math.round(+n || 0)).toLocaleString('es-VE') + ' Bs'; },
     usdt(n) { return (Math.round((+n || 0) * 100) / 100).toLocaleString('es-VE', { minimumFractionDigits: 2 }) + ' USDT'; },
     pct(n) { return (Math.round((+n || 0) * 10) / 10).toLocaleString('es-VE') + '%'; },
@@ -31,6 +32,12 @@
       case 'Zelle':
       case 'USDT':
         return amount; // valor ya en dólares (USDT ≈ USD 1:1 en valor)
+      case 'EUR':
+      case 'Efectivo en euros': {
+        // Euros → Bs (tasa EUR) → USD (tasa USDT del mercado)
+        const e = S.db.rates.eur, u = S.db.rates.usdt;
+        return (e && u) ? (amount * e) / u : amount;
+      }
       case 'Bs-BCV':
       case 'Bolívares a tasa BCV':
         return rateBCV ? amount / rateBCV : 0;
@@ -46,12 +53,23 @@
   }
 
   // Equivalentes completos de un monto USD
-  function equivalents(usd, rateBCV, rateUSDT) {
+  function equivalents(usd, rateBCV, rateUSDT, rateEUR) {
+    if (rateEUR == null) rateEUR = S.db.rates.eur;
     const bsBCV = usd * rateBCV;
     const bsUSDT = usd * rateUSDT;
     const gapBs = bsUSDT - bsBCV;
     const gapPct = rateBCV ? ((rateUSDT - rateBCV) / rateBCV) * 100 : 0;
-    return { usd, bsBCV, bsUSDT, gapBs, gapPct };
+    const eur = rateEUR ? (usd * rateUSDT) / rateEUR : 0; // valor en euros según mercado
+    return { usd, bsBCV, bsUSDT, gapBs, gapPct, eur };
+  }
+
+  // Convierte un movimiento (ingreso/egreso) a USD según su moneda y tasa guardada.
+  function movementUSD(m) {
+    if (m.currency === 'EUR') {
+      const e = m.rate || S.db.rates.eur, u = S.db.rates.usdt;
+      return (e && u) ? (m.amount * e) / u : 0;
+    }
+    return toUSD(m.amount, m.currency === 'Bs' ? 'Bs-USDT' : (m.currency || 'USD'), m.rateBCV || S.db.rates.bcv, m.rate || S.db.rates.usdt);
   }
 
   // ---------------------------------------------------------
@@ -248,7 +266,7 @@
     if (range) movs = filterByRange(movs, m => m.date, range);
     let expenses = 0, extraIncome = 0, adsSpend = 0;
     movs.forEach(m => {
-      const usd = toUSD(m.amount, m.currency === 'Bs' ? 'Bs-USDT' : (m.currency || 'USD'), m.rateBCV || db.rates.bcv, m.rate || db.rates.usdt);
+      const usd = movementUSD(m);
       if (m.type === 'expense') { expenses += usd; if (/Publicidad/.test(m.category)) adsSpend += usd; }
       else extraIncome += usd;
     });
@@ -376,7 +394,7 @@
   }
 
   global.Finance = {
-    fmt, toUSD, equivalents, productCosts, priceByMarkup, priceByMargin,
+    fmt, toUSD, equivalents, movementUSD, productCosts, priceByMarkup, priceByMargin,
     marginOf, markupOf, productAnalysis, saleAnalysis, batchAnalysis,
     distributeFunds, summary, rangeFromKey, rangeFromKey, filterByRange,
     productRankings, supplierRankings, simulate, priceAlerts,
