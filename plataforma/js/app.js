@@ -75,8 +75,17 @@
         <span class="rate-chip">BCV <b>${F.fmt.num(r.bcv)}</b></span>
         <span class="rate-chip">USDT <b>${F.fmt.num(r.usdt)}</b></span>
         <span class="rate-chip">EUR <b>${F.fmt.num(r.eur)}</b></span>
-        <span class="rate-chip">Brecha <span class="gap">${F.fmt.pct(eq.gapPct)}</span></span>`;
+        <span class="rate-chip">Brecha <span class="gap">${F.fmt.pct(eq.gapPct)}</span></span>
+        ${this.syncChip()}`;
     },
+
+    syncChip() {
+      if (!S.cloud.enabled) return '';
+      const m = { online: ['🟢', 'Sincronizado'], saving: ['🟡', 'Guardando…'], connecting: ['🟡', 'Conectando…'], offline: ['🔴', 'Sin conexión'], local: ['⚪', 'Local'] };
+      const [dot, txt] = m[S.cloud.status] || m.local;
+      return `<span class="rate-chip" title="Estado de sincronización con la nube">${dot} ${txt}</span>`;
+    },
+    renderStatus() { if (el('#topbar-rates')) this.renderRates(); },
 
     renderUser() {
       const u = S.currentUser;
@@ -84,7 +93,7 @@
         <div class="avatar">${UI.avatar(u.name)}</div>
         <div><div class="u-name">${esc(u.name)}</div><div class="u-role">${esc(u.role)}</div></div>
         <span class="logout" title="Cerrar sesión">⏻</span>`;
-      el('#sidebar-user .logout').onclick = () => { S.logout(); location.reload(); };
+      el('#sidebar-user .logout').onclick = async () => { try { await S.cloud.signOut(); } catch (e) {} S.logout(); location.reload(); };
     },
   };
 
@@ -126,6 +135,84 @@
     el('#login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
   }
 
+  // ---------------------------------------------------------
+  //  Login en la nube (correo + contraseña, Supabase Auth)
+  // ---------------------------------------------------------
+  function translateAuthError(e) {
+    const msg = (e && e.message ? e.message : String(e)).toLowerCase();
+    if (msg.includes('invalid login')) return 'Correo o contraseña incorrectos.';
+    if (msg.includes('already registered') || msg.includes('already been registered')) return 'Ese correo ya tiene cuenta. Inicia sesión.';
+    if (msg.includes('password') && msg.includes('6')) return 'La contraseña debe tener al menos 6 caracteres.';
+    if (msg.includes('email') && msg.includes('confirm')) return 'Confirma tu correo antes de entrar (revisa tu bandeja).';
+    if (msg.includes('relation') && msg.includes('workspace')) return 'Falta crear la tabla en Supabase (ejecuta el script SQL).';
+    if (msg.includes('permission') || msg.includes('row-level') || msg.includes('policy')) return 'Falta configurar permisos en Supabase (ejecuta el script SQL).';
+    if (msg.includes('failed to fetch') || msg.includes('network')) return 'Sin conexión con la nube. Revisa tu internet.';
+    return 'No se pudo completar: ' + (e && e.message ? e.message : 'error desconocido');
+  }
+
+  function setupCloudLogin() {
+    const card = el('.login-card');
+    let mode = 'login';
+    const render = () => {
+      card.innerHTML = `
+        <div class="login-brand"><span class="logo-moon">🌙</span> Descanso<span class="logo-dot">.</span></div>
+        <p class="login-sub">${mode === 'login' ? 'Entra a tu panel' : 'Crea tu cuenta'}</p>
+        <label class="field"><span>Correo</span><input id="cl-email" type="email" autocomplete="username" placeholder="tucorreo@ejemplo.com"></label>
+        <label class="field"><span>Contraseña</span><input id="cl-pass" type="password" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" placeholder="Mínimo 6 caracteres"></label>
+        <button id="cl-go" class="btn btn-primary btn-block">${mode === 'login' ? 'Entrar' : 'Crear cuenta'}</button>
+        <p id="cl-msg" class="login-hint" style="min-height:18px;margin:8px 0 0"></p>
+        <p class="login-hint" style="margin-top:6px">${mode === 'login' ? '¿No tienes cuenta? <a id="cl-toggle" style="cursor:pointer;font-weight:700">Créala aquí</a>' : '¿Ya tienes cuenta? <a id="cl-toggle" style="cursor:pointer;font-weight:700">Inicia sesión</a>'}</p>
+        <p class="login-hint">Tus datos se guardan en la nube y se ven igual en todos tus dispositivos.</p>`;
+      el('#cl-toggle', card).onclick = () => { mode = (mode === 'login' ? 'signup' : 'login'); render(); };
+      el('#cl-go', card).onclick = submit;
+      el('#cl-pass', card).addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+      el('#cl-email', card).focus();
+    };
+    const submit = async () => {
+      const email = el('#cl-email', card).value.trim(), pass = el('#cl-pass', card).value;
+      const msg = el('#cl-msg', card); msg.style.color = 'var(--danger)'; msg.textContent = '';
+      if (!email || !pass) { msg.textContent = 'Escribe tu correo y contraseña.'; return; }
+      const btn = el('#cl-go', card); const label = btn.textContent; btn.disabled = true; btn.textContent = 'Conectando…';
+      try {
+        if (mode === 'signup') {
+          await S.cloud.signUp(email, pass);
+          if (!S.cloud.session) { msg.style.color = 'var(--success)'; msg.textContent = 'Cuenta creada. Revisa tu correo para confirmar y luego inicia sesión.'; btn.disabled = false; btn.textContent = label; mode = 'login'; return; }
+        } else {
+          await S.cloud.signIn(email, pass);
+        }
+        await S.cloudBootstrap(S.cloud.session.user.email);
+        startApp();
+      } catch (e) {
+        console.warn(e); msg.style.color = 'var(--danger)'; msg.textContent = translateAuthError(e);
+        btn.disabled = false; btn.textContent = label;
+      }
+    };
+    render();
+  }
+
+  // ---------------------------------------------------------
+  //  Sincronización periódica (trae cambios de otros dispositivos)
+  // ---------------------------------------------------------
+  let syncLoopStarted = false;
+  async function cloudSyncTick() {
+    if (!S.cloud.enabled || !S.cloud.session) return;
+    try {
+      const row = await S.cloud.pull();
+      if (row && row.updated_at && row.updated_at !== S.lastSync) {
+        S.applyRemote(row.data, row.updated_at);
+        App.renderNav(); App.renderRates(); App.renderView();
+      }
+      S.cloud.setStatus(S.cloud.status === 'saving' ? 'saving' : 'online');
+    } catch (e) { S.cloud.setStatus('offline'); }
+  }
+  function startCloudSyncLoop() {
+    if (syncLoopStarted || !S.cloud.enabled) return;
+    syncLoopStarted = true;
+    setInterval(cloudSyncTick, 20000);
+    window.addEventListener('focus', cloudSyncTick);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) cloudSyncTick(); });
+  }
+
   function startApp() {
     el('#login-screen').classList.add('hidden');
     el('#app').classList.remove('hidden');
@@ -142,15 +229,29 @@
     App.renderNav();
     App.renderView();
     window.addEventListener('hashchange', () => { const h = location.hash.replace('#', ''); if (h && h !== App.current) App.go(h); });
+    startCloudSyncLoop();
   }
 
   // ---------------------------------------------------------
   //  Init
   // ---------------------------------------------------------
-  function init() {
-    S.load();
-    setupLogin();
+  async function init() {
     global.App = App;
+    S.load();
+    S.cloud.init();
+    S.cloud.onstatus = () => App.renderStatus();
+    if (S.cloud.enabled) {
+      setupCloudLogin(); // prepara la pantalla de correo/contraseña
+      let session = null;
+      try { session = await S.cloud.getSession(); } catch (e) { console.warn(e); }
+      if (session && session.user) {
+        try { await S.cloudBootstrap(session.user.email); startApp(); return; }
+        catch (e) { console.warn('bootstrap falló, se pedirá login', e); }
+      }
+      // si no hay sesión válida, se queda en la pantalla de login (ya montada)
+    } else {
+      setupLogin(); // modo local (sin nube configurada): usuarios demo
+    }
   }
 
   global.App = App;

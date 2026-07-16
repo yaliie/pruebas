@@ -162,15 +162,44 @@
     }
     return db;
   }
-  function save() {
+  function save(opts) {
     try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { console.warn('No se pudo guardar', e); }
+    if (!opts || opts.cloud !== false) Store.cloudPush();
   }
   function reset() { db = seed(); save(); return db; }
 
   // Migración para datos guardados de versiones anteriores (añade campos nuevos).
   function migrate() {
     if (db && db.rates && db.rates.eur == null) db.rates.eur = 832;
+    if (db && !db.access) db.access = {};
   }
+
+  // ---------------------------------------------------------
+  //  Sincronización en la nube (Supabase) — opcional
+  //  Guarda TODO el panel como un documento JSON compartido.
+  //  Si no hay configuración/red, el panel sigue funcionando
+  //  localmente (localStorage) sin romperse.
+  // ---------------------------------------------------------
+  const Cloud = {
+    enabled: false, client: null, session: null, ws: 'main', status: 'local', onstatus: null,
+    init() {
+      const cfg = global.DESCANSO_CLOUD;
+      if (cfg && cfg.url && cfg.key && global.supabase && global.supabase.createClient) {
+        try {
+          this.client = global.supabase.createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true } });
+          this.enabled = true; this.status = 'connecting';
+        } catch (e) { console.warn('Supabase init falló', e); this.enabled = false; }
+      }
+      return this.enabled;
+    },
+    setStatus(s) { this.status = s; if (this.onstatus) this.onstatus(s); },
+    async getSession() { if (!this.enabled) return null; const { data } = await this.client.auth.getSession(); this.session = data ? data.session : null; return this.session; },
+    async signIn(email, password) { const { data, error } = await this.client.auth.signInWithPassword({ email: (email || '').trim(), password }); if (error) throw error; this.session = data.session; return data.session; },
+    async signUp(email, password) { const { data, error } = await this.client.auth.signUp({ email: (email || '').trim(), password }); if (error) throw error; this.session = data.session; return data; },
+    async signOut() { if (this.enabled) { try { await this.client.auth.signOut(); } catch (e) {} } this.session = null; },
+    async pull() { const { data, error } = await this.client.from('workspace').select('data,updated_at').eq('id', this.ws).maybeSingle(); if (error) throw error; return data; },
+    async push(obj) { const ts = new Date().toISOString(); const { error } = await this.client.from('workspace').upsert({ id: this.ws, data: obj, updated_at: ts }); if (error) throw error; return ts; },
+  };
 
   // ---------------------------------------------------------
   //  Bitácora de cambios (historial)
@@ -239,6 +268,40 @@
       db.rateHistory.push({ id: uid('r'), bcv: +bcv, usdt: +usdt, eur: +eur, date: now() });
       log('tasas', 'actualizar', 'BCV/USDT/EUR', old.bcv + '/' + old.usdt + '/' + old.eur, bcv + '/' + usdt + '/' + eur);
       save();
+    },
+
+    // ---- Nube ----
+    cloud: Cloud,
+    lastSync: null,
+    _pushTimer: null,
+    cloudPush() {
+      if (!Cloud.enabled || !Cloud.session) return;
+      Cloud.setStatus('saving');
+      clearTimeout(this._pushTimer);
+      this._pushTimer = setTimeout(async () => {
+        try { this.lastSync = await Cloud.push(db); Cloud.setStatus('online'); }
+        catch (e) { console.warn('cloud push', e); Cloud.setStatus('offline'); }
+      }, 700);
+    },
+    // Aplica un documento remoto sobre el estado local (sin re-empujar a la nube).
+    applyRemote(data, ts) {
+      if (!data) return;
+      db = data; migrate();
+      this.lastSync = ts || this.lastSync;
+      save({ cloud: false });
+    },
+    // Tras autenticar: trae el documento remoto (o empuja la semilla local),
+    // fija el rol del usuario y deja el panel listo.
+    async cloudBootstrap(email) {
+      const row = await Cloud.pull(); // puede lanzar error de red/permiso
+      if (row && row.data) { db = row.data; migrate(); this.lastSync = row.updated_at; }
+      db.access = db.access || {};
+      if (Object.keys(db.access).length === 0) db.access[email] = 'Administrador'; // primer usuario = admin
+      else if (!db.access[email]) db.access[email] = 'Colaborador';
+      this.currentUser = { id: email, name: (email.split('@')[0] || email), email, role: db.access[email] };
+      save({ cloud: false });
+      try { this.lastSync = await Cloud.push(db); Cloud.setStatus('online'); } catch (e) { Cloud.setStatus('offline'); }
+      return this.currentUser;
     },
   };
 

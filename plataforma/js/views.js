@@ -1000,10 +1000,12 @@
           <button class="btn btn-primary btn-block" data-saveconfig>Guardar configuración</button>
         </div>
       </div>
-      <div class="section-title">👥 Usuarios y accesos</div>
+      <div class="section-title">👥 Usuarios y accesos ${S.cloud.enabled ? '<span class="hint">· en la nube</span>' : ''}</div>
       <div class="card card-pad">
-        ${UI.table([{ label: 'Usuario', get: u => `<b>${esc(u.name)}</b>` }, { label: 'Rol', get: u => UI.pill(u.role, u.role === 'Administrador' ? 'b' : 'a') }, { label: 'Permisos', get: u => u.role === 'Administrador' ? 'Control total' : 'Registra ventas, pedidos e inventario' }], S.db.users)}
-        <p class="muted small" style="margin-top:10px">El colaborador no puede modificar tasas, eliminar movimientos financieros ni ver información sensible sin autorización.</p>
+        ${accessCardHTML()}
+        <p class="muted small" style="margin-top:10px">${S.cloud.enabled
+          ? 'Cada persona entra con su propio correo y contraseña. El primero en registrarse es Administrador; los demás entran como Colaborador y tú puedes cambiar su rol aquí. El colaborador no modifica tasas ni elimina movimientos financieros.'
+          : 'El colaborador no puede modificar tasas, eliminar movimientos financieros ni ver información sensible sin autorización.'}</p>
       </div>
       <div class="section-title">➕ Categorías de gastos (escalable)</div>
       <div class="card card-pad">
@@ -1030,7 +1032,38 @@
     UI.el('[data-addcat]', c).onclick = () => { const v = UI.el('#newcat', c).value.trim(); if (!v) return; cfg.expenseCats.push(v); S.log('config', 'crear', 'categoría gasto', '', v); S.save(); Views.configuracion(c); };
     UI.el('[data-export]', c).onclick = () => UI.download('respaldo_descanso.json', JSON.stringify(S.db, null, 2), 'application/json');
     UI.el('[data-reset]', c).onclick = () => UI.confirm('¿Restablecer TODOS los datos a los de ejemplo? Se perderán tus cambios.', () => { S.reset(); UI.toast('Datos restablecidos', 'g'); global.App.refresh(); }, { danger: true, yes: 'Restablecer' });
+    UI.els('[data-role-email]', c).forEach(sel => sel.onchange = () => {
+      const email = sel.dataset.roleEmail; S.db.access[email] = sel.value;
+      S.log('accesos', 'editar', email, '', sel.value); S.save();
+      UI.toast('Rol actualizado', 'g');
+    });
   };
+
+  // Tarjeta de usuarios: accesos en la nube (correos/roles) o usuarios demo.
+  function accessCardHTML() {
+    if (!S.cloud.enabled) {
+      return UI.table([
+        { label: 'Usuario', get: u => `<b>${esc(u.name)}</b>` },
+        { label: 'Rol', get: u => UI.pill(u.role, u.role === 'Administrador' ? 'b' : 'a') },
+        { label: 'Permisos', get: u => u.role === 'Administrador' ? 'Control total' : 'Registra ventas, pedidos e inventario' },
+      ], S.db.users);
+    }
+    const access = S.db.access || {};
+    const emails = Object.keys(access);
+    if (!emails.length) return `<div class="empty small">Aún no hay usuarios registrados.</div>`;
+    const me = S.currentUser ? S.currentUser.email : '';
+    const rows = emails.map(email => ({
+      email, isMe: email === me,
+      cell: `<select data-role-email="${esc(email)}" ${email === me ? 'disabled title="No puedes cambiar tu propio rol"' : ''} style="border:1px solid var(--border-2);border-radius:8px;padding:5px 8px">
+          <option value="Administrador" ${access[email] === 'Administrador' ? 'selected' : ''}>Administrador</option>
+          <option value="Colaborador" ${access[email] === 'Colaborador' ? 'selected' : ''}>Colaborador</option>
+        </select>`,
+    }));
+    return UI.table([
+      { label: 'Correo', get: r => `<b>${esc(r.email)}</b>${r.isMe ? ' <span class="pill n">tú</span>' : ''}` },
+      { label: 'Rol', get: r => r.cell },
+    ], rows);
+  }
 
   // =========================================================
   //  BITÁCORA / SEGURIDAD (historial de cambios)
